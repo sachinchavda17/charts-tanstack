@@ -1,4 +1,7 @@
 "use client";
+
+import { topology } from "@/topology";
+import { extractTopologyData } from "@/utils/helper";
 import * as d3 from "d3";
 import { useEffect, useRef } from "react";
 
@@ -9,35 +12,15 @@ export default function TopologyCompo() {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    const nodes = [
-      { id: "Router 1", type: "router" },
-      { id: "Router 2", type: "router" },
-      { id: "Switch 1", type: "switch" },
-      { id: "Switch 2", type: "switch" },
-      { id: "Server 1", type: "server" },
-      { id: "Server 2", type: "server" },
-      { id: "Client 1", type: "client" },
-      { id: "Client 2", type: "client" },
-    ];
+    // ✅ Extract topology and provide fallback
+    const topologyExtract = extractTopologyData(topology) || {
+      nodes: [],
+      links: [],
+    };
+    const nodes = topologyExtract.nodes || [];
+    const links = topologyExtract.links || [];
 
-    const links = [
-      { source: "Router 1", target: "Router 2" },
-      { source: "Router 1", target: "Switch 1" },
-      { source: "Router 2", target: "Switch 2" },
-      { source: "Switch 1", target: "Server 1" },
-      { source: "Switch 1", target: "Client 1" },
-      { source: "Switch 2", target: "Server 2" },
-      { source: "Switch 2", target: "Client 2" },
-    ];
-
-    const legendData = [
-      { label: "Server", color: "green" },
-      { label: "Router", color: "red" },
-      { label: "Switch", color: "blue" },
-      { label: "Client", color: "orange" },
-    ];
-
-    d3.select(ref.current).selectAll("*").remove(); // Clear previous graph
+    d3.select(ref.current).selectAll("*").remove();
 
     const svg = d3
       .select(ref.current)
@@ -53,7 +36,7 @@ export default function TopologyCompo() {
 
     const g = svg.append("g");
 
-    // Define arrow markers
+    // ✅ Define Arrow Markers for Links
     g.append("defs")
       .append("marker")
       .attr("id", "arrow")
@@ -67,7 +50,7 @@ export default function TopologyCompo() {
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "#aaa");
 
-    // Force simulation
+    // ✅ Force Simulation
     const simulation = d3
       .forceSimulation(nodes)
       .force(
@@ -82,7 +65,7 @@ export default function TopologyCompo() {
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collision", d3.forceCollide().radius(40));
 
-    // Draw links
+    // ✅ Draw Links
     const link = g
       .selectAll("line")
       .data(links)
@@ -92,22 +75,14 @@ export default function TopologyCompo() {
       .attr("stroke-width", 2)
       .attr("marker-end", "url(#arrow)");
 
-    // Draw nodes
+    // ✅ Draw Nodes with Dynamic Colors
     const node = g
       .selectAll("circle")
       .data(nodes)
       .enter()
       .append("circle")
       .attr("r", 20)
-      .attr("fill", (d) =>
-        d.type === "router"
-          ? "red"
-          : d.type === "switch"
-          ? "blue"
-          : d.type === "server"
-          ? "green"
-          : "orange"
-      )
+      .attr("fill", "green")
       .call(
         d3
           .drag()
@@ -127,44 +102,19 @@ export default function TopologyCompo() {
           })
       );
 
-    // Add labels
+    // ✅ Add Labels
     const labels = g
       .selectAll("text")
       .data(nodes)
       .enter()
       .append("text")
-      .text((d) => d.id)
+      .text((d) => d.name)
       .attr("font-size", "12px")
       .attr("fill", "#a09da3")
       .attr("dx", 25)
       .attr("dy", 5);
 
-    // Append Legend
-    const legend = svg.append("g").attr("transform", `translate(20, 20)`);
-
-    legend
-      .selectAll("rect")
-      .data(legendData)
-      .enter()
-      .append("rect")
-      .attr("x", 0)
-      .attr("y", (d, i) => i * 20)
-      .attr("width", 15)
-      .attr("height", 15)
-      .attr("fill", (d) => d.color);
-
-    legend
-      .selectAll("text")
-      .data(legendData)
-      .enter()
-      .append("text")
-      .attr("x", 20)
-      .attr("y", (d, i) => i * 20 + 12)
-      .attr("font-size", "12px")
-      .attr("fill", "#a09da3")
-      .text((d) => d.label);
-
-    // Tick function
+    // ✅ Tick Function (Updates Positions)
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => d.source.x)
@@ -176,23 +126,19 @@ export default function TopologyCompo() {
       labels.attr("x", (d) => d.x).attr("y", (d) => d.y);
     });
 
-    // Node click highlight
+    // ✅ Highlight Connections on Click
     node.on("click", function (event, d) {
-      node.attr("fill", (n) =>
-        n.id === d.id ||
-        links.some(
-          (l) =>
-            (l.source.id === d.id && l.target.id === n.id) ||
-            (l.target.id === d.id && l.source.id === n.id)
-        )
-          ? "yellow"
-          : n.type === "router"
-          ? "red"
-          : n.type === "switch"
-          ? "blue"
-          : n.type === "server"
-          ? "green"
-          : "orange"
+      node.attr(
+        "fill",
+        (n) =>
+          n.id === d.id ||
+          (links.some(
+            (l) =>
+              (l.source.id === d.id && l.target.id === n.id) ||
+              (l.target.id === d.id && l.source.id === n.id)
+          )
+            ? "blue"
+            : "green")
       );
 
       link

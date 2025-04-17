@@ -9,11 +9,11 @@ import { AreaChartNew } from "@/components/AreaChartNew";
 export default function Home() {
   return (
     <div className="flex items-center justify-center mt-5 flex-col gap-10">
+      <AreaChartIntractive/>
+      <AreaChartNew/>
       <LineChartCompo />
       <AreaChartCompo />
       <AreaCompo />
-      <AreaChartIntractive/>
-      <AreaChartNew/>
     </div>
   );
 }

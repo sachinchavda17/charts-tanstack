@@ -221,7 +221,7 @@ function ChartLegendContent({
   hideIcon = false,
   payload,
   verticalAlign = "bottom",
-  nameKey
+  nameKey,onClick 
 }) {
   const { config } = useChart()
 
@@ -245,7 +245,8 @@ function ChartLegendContent({
             key={item.value}
             className={cn(
               "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
-            )}>
+            )}
+            onClick={() => onClick?.(item)} >
             {itemConfig?.icon && !hideIcon ? (
               <itemConfig.icon />
             ) : (

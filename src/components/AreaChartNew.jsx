@@ -43,23 +43,26 @@ const chartConfig = {
 };
 
 export function AreaChartNew() {
-  const [timeRange, setTimeRange] = React.useState("90d");
+  const [timeRange, setTimeRange] = React.useState("1h");
 
   const filteredData = React.useMemo(() => {
-    const referenceDate = new Date();
-    let daysToSubtract = 90;
-
-    if (timeRange === "30d") {
-      daysToSubtract = 30;
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7;
+    const lastTimestamp = data[data.length - 1].timestamp;
+    let timeLimit;
+    if (timeRange === "6h") {
+      timeLimit = lastTimestamp - 6 * 60 * 60; // 6 hours ago
+    } else if (timeRange === "3h") {
+      timeLimit = lastTimestamp - 3 * 60 * 60; // 3 hours ago
+    } else if (timeRange === "1h") {
+      timeLimit = lastTimestamp - 1 * 60 * 60; // 1 hour ago
     }
-
-    const startDate = new Date(referenceDate);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-
-    return data.filter((item) => new Date(item.timestamp * 1000) >= startDate);
+    return data.filter((item) => item.timestamp >= timeLimit);
   }, [timeRange]);
+
+  const timeRangeLabel = {
+    "6h": "the last 6 hours",
+    "3h": "the last 3 hours",
+    "1h": "the last hour",
+  }[timeRange];
 
   return (
     <Card className={"w-full"}>
@@ -67,7 +70,7 @@ export function AreaChartNew() {
         <div className="grid flex-1 gap-1 text-center sm:text-left">
           <CardTitle>Area Chart - Interactive</CardTitle>
           <CardDescription>
-            Showing total visitors for the last 3 months
+              Showing total visitors for {timeRangeLabel}
           </CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -75,17 +78,17 @@ export function AreaChartNew() {
             className="w-[160px] rounded-lg sm:ml-auto"
             aria-label="Select a value"
           >
-            <SelectValue placeholder="Last 3 months" />
+            <SelectValue placeholder="Last 6 hours" />
           </SelectTrigger>
           <SelectContent className="rounded-xl">
-            <SelectItem value="90d" className="rounded-lg">
-              Last 3 months
+            <SelectItem value="6h" className="rounded-lg">
+              Last 6 hours
             </SelectItem>
-            <SelectItem value="30d" className="rounded-lg">
-              Last 30 days
+            <SelectItem value="3h" className="rounded-lg">
+              Last 3 hours
             </SelectItem>
-            <SelectItem value="7d" className="rounded-lg">
-              Last 7 days
+            <SelectItem value="1h" className="rounded-lg">
+              Last 1 hour
             </SelectItem>
           </SelectContent>
         </Select>

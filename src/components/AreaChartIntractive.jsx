@@ -1,13 +1,16 @@
-"use client";
-
 import * as React from "react";
 import {
   Area,
   AreaChart,
+  Brush,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
+  YAxis,
 } from "recharts";
 
 import {
@@ -32,8 +35,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { data } from "@/data";
-import { format } from "date-fns";
+import { bandwidth } from "@/bandwidth";
+import moment from "moment";
 
 const chartConfig = {
   bandwidth: {
@@ -51,23 +54,52 @@ const chartConfig = {
 };
 
 export function AreaChartIntractive() {
-  const [timeRange, setTimeRange] = React.useState("90d");
+  const [timeRange, setTimeRange] = React.useState("1h");
+  const [activeKeys, setActiveKeys] = React.useState([
+    "bandwidth",
+    "transmit",
+    "receive",
+  ]);
+  const handleLegendClick = (key) => {
+    console.log("clicked");
+    setActiveKeys((prev) => {
+      if (prev.includes(key)) {
+        const updateKeys = prev.filter((item) => item !== key);
+        return updateKeys.length === 0
+          ? ["bandwidth", "transmit", "receive"]
+          : updateKeys;
+      }
+      return [...prev, key];
+    });
+  };
 
-  const filteredData = React.useMemo(() => {
-    const referenceDate = new Date();
-    let daysToSubtract = 90;
-
-    if (timeRange === "30d") {
-      daysToSubtract = 30;
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7;
+  const filteredData = () => {
+    const lastTimestamp = bandwidth[bandwidth.length - 1].timestamp;
+    let timeLimit;
+    if (timeRange === "6h") {
+      timeLimit = lastTimestamp - 6 * 60 * 60; // 6 hours ago
+    } else if (timeRange === "3h") {
+      timeLimit = lastTimestamp - 3 * 60 * 60; // 3 hours ago
+    } else if (timeRange === "1h") {
+      timeLimit = lastTimestamp - 1 * 60 * 60; // 1 hour ago
     }
+    return bandwidth.filter((item) => item.timestamp >= timeLimit);
+  };
 
-    const startDate = new Date(referenceDate);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
+  const data = filteredData();
+  const timeRangeLabel = {
+    "6h": "the last 6 hours",
+    "3h": "the last 3 hours",
+    "1h": "the last hour",
+  }[timeRange];
 
-    return data.filter((item) => new Date(item.timestamp * 1000) >= startDate);
-  }, [timeRange]);
+  if (data.length === 0) {
+    return (
+      <p className="text-center py-10 text-muted-foreground">
+        No data available for selected range.
+      </p>
+    );
+  }
 
   return (
     <Card className={"w-full"}>
@@ -75,7 +107,7 @@ export function AreaChartIntractive() {
         <div className="grid flex-1 gap-1 text-center sm:text-left">
           <CardTitle>Area Chart - Interactive</CardTitle>
           <CardDescription>
-            Showing total visitors for the last 3 months
+            Showing total visitors for {timeRangeLabel}
           </CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -83,17 +115,17 @@ export function AreaChartIntractive() {
             className="w-[160px] rounded-lg sm:ml-auto"
             aria-label="Select a value"
           >
-            <SelectValue placeholder="Last 3 months" />
+            <SelectValue placeholder="Last 6 hours" />
           </SelectTrigger>
           <SelectContent className="rounded-xl">
-          <SelectItem value="90d" className="rounded-lg">
-              Last 3 months
+            <SelectItem value="6h" className="rounded-lg">
+              Last 6 hours
             </SelectItem>
-            <SelectItem value="30d" className="rounded-lg">
-              Last 30 days
+            <SelectItem value="3h" className="rounded-lg">
+              Last 3 hours
             </SelectItem>
-            <SelectItem value="7d" className="rounded-lg">
-              Last 7 days
+            <SelectItem value="1h" className="rounded-lg">
+              Last 1 hour
             </SelectItem>
           </SelectContent>
         </Select>
@@ -104,42 +136,42 @@ export function AreaChartIntractive() {
           className="aspect-auto h-[250px] w-full"
         >
           <ResponsiveContainer>
-            <AreaChart data={filteredData}>
+            <AreaChart data={data}>
               <defs>
                 <linearGradient id="fillBandwidth" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor="var(--color-bandwidth)"
-                    stopOpacity={0.8}
+                    stopOpacity={activeKeys.includes("bandwidth") ? 0.8 : 0}
                   />
                   <stop
                     offset="95%"
                     stopColor="var(--color-bandwidth)"
-                    stopOpacity={0.1}
+                    stopOpacity={activeKeys.includes("bandwidth") ? 0.1 : 0}
                   />
                 </linearGradient>
                 <linearGradient id="fillTransmit" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor="var(--color-transmit)"
-                    stopOpacity={0.8}
+                    stopOpacity={activeKeys.includes("transmit") ? 0.8 : 0}
                   />
                   <stop
                     offset="95%"
                     stopColor="var(--color-transmit)"
-                    stopOpacity={0.1}
+                    stopOpacity={activeKeys.includes("transmit") ? 0.1 : 0}
                   />
                 </linearGradient>
                 <linearGradient id="fillReceive" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor="var(--color-receive)"
-                    stopOpacity={0.8}
+                    stopOpacity={activeKeys.includes("receive") ? 0.8 : 0}
                   />
                   <stop
                     offset="95%"
                     stopColor="var(--color-receive)"
-                    stopOpacity={0.1}
+                    stopOpacity={activeKeys.includes("receive") ? 0.1 : 0}
                   />
                 </linearGradient>
               </defs>
@@ -150,40 +182,128 @@ export function AreaChartIntractive() {
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={32}
-                tickFormatter={(value) =>
-                  new Date(value * 1000).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                }
+                tickFormatter={(value) => {
+                  if (timeRange === "1h")
+                    return moment.unix(value).format("HH:mm:ss");
+                  return moment.unix(value).format("HH:mm");
+                }}
+              />
+              <YAxis
+                orientation="left"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
               />
               <ChartTooltip
                 cursor={false}
                 content={<ChartTooltipContent indicator="dot" />}
               />
-
               <Area
                 dataKey="bandwidth"
                 type="natural"
                 fill="url(#fillBandwidth)"
-                stroke="var(--color-bandwidth)"
+                fillOpacity={activeKeys.includes("bandwidth") ? 0.4 : 0}
+                stroke={
+                  activeKeys.includes("bandwidth")
+                    ? "var(--color-bandwidth)"
+                    : ""
+                }
                 stackId="a"
+                hide={!activeKeys.includes("bandwidth")}
               />
               <Area
                 dataKey="transmit"
                 type="natural"
                 fill="url(#fillTransmit)"
-                stroke="var(--color-transmit)"
+                fillOpacity={activeKeys.includes("transmit") ? 0.4 : 0}
+                stroke={
+                  activeKeys.includes("transmit") ? "var(--color-transmit)" : ""
+                }
                 stackId="a"
+                hide={!activeKeys.includes("transmit")}
               />
               <Area
                 dataKey="receive"
                 type="natural"
                 fill="url(#fillReceive)"
-                stroke="var(--color-receive)"
+                fillOpacity={activeKeys.includes("receive") ? 0.4 : 0}
+                stroke={
+                  activeKeys.includes("receive") ? "var(--color-receive)" : ""
+                }
                 stackId="a"
+                hide={!activeKeys.includes("receive")}
               />
-              <ChartLegend content={<ChartLegendContent />} />
+              <ChartLegend
+                content={
+                  <ChartLegendContent
+                    onClick={(e) => handleLegendClick(e.dataKey)}
+                  />
+                }
+              />
+              <XAxis
+                dataKey="timestamp"
+                axisLine={false}
+                tickLine={false}
+                xAxisId="1"
+                tick={{ dy: 10, fill: "#aaa" }}
+                tickFormatter={(value) => moment.unix(value).format("HH:mm")}
+                height={30}
+                padding={{ left: 10, right: 10 }}
+                interval="preserveStartEnd"
+              />
+              <Brush
+                dataKey="timestamp"
+                height={40}
+                stroke="#8884d8"
+                fill="rgba(136, 132, 216, 0.2)"
+                tickFormatter={(value) => {
+                  if (timeRange === "1h")
+                    return moment.unix(value).format("HH:mm:ss");
+                  return moment.unix(value).format("HH:mm");
+                }}
+              >
+                <LineChart data={data}>
+                  <Line
+                    dataKey="bandwidth"
+                    type="monotone"
+                    fill="var(--color-bandwidth)"
+                    fillOpacity={activeKeys.includes("bandwidth") ? 0.4 : 0}
+                    stroke={
+                      activeKeys.includes("bandwidth")
+                        ? "var(--color-bandwidth)"
+                        : ""
+                    }
+                    dot={false}
+                    yAxis={false}
+                  />
+                  <Line
+                    dataKey="transmit"
+                    type="monotone"
+                    fill="var(--color-transmit)"
+                    fillOpacity={activeKeys.includes("transmit") ? 0.4 : 0}
+                    stroke={
+                      activeKeys.includes("transmit")
+                        ? "var(--color-transmit)"
+                        : ""
+                    }
+                    dot={false}
+                    yAxis={false}
+                  />
+                  <Line
+                    dataKey="receive"
+                    type="monotone"
+                    fill="var(--color-receive)"
+                    fillOpacity={activeKeys.includes("receive") ? 0.4 : 0}
+                    stroke={
+                      activeKeys.includes("receive")
+                        ? "var(--color-receive)"
+                        : ""
+                    }
+                    dot={false}
+                    yAxis={false}
+                  />
+                </LineChart>
+              </Brush>
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
